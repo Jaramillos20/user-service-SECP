@@ -1,8 +1,8 @@
 package com.binarybrains.userservice.external.rest.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.binarybrains.userservice.core.buisness.input.UserService;
@@ -16,9 +16,9 @@ public class UserController {
     public UserController(UserService userService) {
         this.userService = userService;
     }
-    @GetMapping("/")
-    public String getMethodName(@RequestParam UserDto userDto) {
-        return userService.create(userDto.toEntity()).toString();
+ 
+    @GetMapping("/{id}")
+    public UserDto getUsersById(@PathVariable("id") Integer id) {
+        return UserDto.fromEntity(userService.getById(id));
     }
-    
-}
+} 
