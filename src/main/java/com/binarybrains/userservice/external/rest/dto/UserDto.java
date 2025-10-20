@@ -12,19 +12,21 @@ import lombok.Setter;
 public class UserDto {
     private String name;
     private String email;
+    private String number; 
 
     public static UserDto fromEntity(User user) {
-    return UserDto.builder()
+        return UserDto.builder()
             .name(user.getName())
             .email(user.getEmail())
+            .number(user.getNumber())
             .build();
-}
-public User toEntity() {
-    return User.builder()
+    }
+    public User toEntity() {
+        return User.builder()
             .name(this.name)
             .email(this.email)
+            .number(this.number)
             .build();
-}
-
+    }
 }
 
