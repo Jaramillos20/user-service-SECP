@@ -4,7 +4,7 @@
 [![Java Version](https://img.shields.io/badge/Java-21%2B-orange)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html)
 </div>
 
-# Scalable E commerce platform
+# User service SECP
 This is a e comerce platform using microservices architecture in Springboot and Java 21. This proyect handle various aspects of an online store, such as product catalog management, user authentication, 
 shopping cart, payment processing, and order management.
 
