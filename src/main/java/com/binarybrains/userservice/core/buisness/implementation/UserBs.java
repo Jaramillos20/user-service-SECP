@@ -6,6 +6,9 @@ import org.springframework.stereotype.Service;
 import com.binarybrains.userservice.core.buisness.input.UserService;
 import com.binarybrains.userservice.core.buisness.output.UserRepository;
 import com.binarybrains.userservice.core.entity.User;
+import com.binarybrains.userservice.utils.ErrorCode;
+
+import io.vavr.control.Either;
 
 @Service
 public class UserBs implements UserService{
@@ -15,8 +18,12 @@ public class UserBs implements UserService{
         this.userRepository = userRepository;
     }
     @Override
-    public User getById(Integer id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getById'");
+    public Either<User, ErrorCode> getById(Integer id) {
+        Either<User, ErrorCode> result = Either.right(ErrorCode.RN004);
+        var userOpt = userRepository.findById(id);
+        if(userOpt.isPresent()){
+            result = Either.left(userOpt.get());
+        }
+        return result;
     }
 }

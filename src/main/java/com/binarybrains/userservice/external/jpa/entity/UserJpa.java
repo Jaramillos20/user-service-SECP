@@ -1,5 +1,8 @@
 package com.binarybrains.userservice.external.jpa.entity;
 
+import com.binarybrains.userservice.core.entity.User;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -18,12 +21,16 @@ import lombok.Setter;
 @Table(name = "ec01-users")
 public class UserJpa {
     @Id
+    @Column(name="id_user")
     private Long id;
+    @Column(name="tx_name")
     private String name;
+    @Column(name="tx_email")
     private String email;
+    @Column(name="tx_phone_number")
     private String number;
-    public UserJpa toEntity() {
-        return UserJpa.builder()
+    public User toEntity() {
+        return User.builder()
             .id(this.id)
             .name(this.name)
             .email(this.email)

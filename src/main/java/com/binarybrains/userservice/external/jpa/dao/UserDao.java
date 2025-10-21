@@ -6,15 +6,19 @@ import org.springframework.stereotype.Repository;
 
 import com.binarybrains.userservice.core.buisness.output.UserRepository;
 import com.binarybrains.userservice.core.entity.User;
+import com.binarybrains.userservice.external.jpa.entity.UserJpa;
+import com.binarybrains.userservice.external.jpa.repository.UserJpaRepository;
 
 @Repository
 public class UserDao implements UserRepository{
 
-    @Override
-    public Optional<User> findById(User user) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'findById'");
+    private final UserJpaRepository userJpaRepository;
+    public UserDao(UserJpaRepository userJpaRepository) {
+        this.userJpaRepository = userJpaRepository;
     }
 
-    
+    @Override
+    public Optional<User> findById(Integer id) {
+        return userJpaRepository.findById(id).map(UserJpa::toEntity);
+    }   
 }

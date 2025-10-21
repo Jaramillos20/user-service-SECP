@@ -5,5 +5,5 @@ import java.util.Optional;
 import com.binarybrains.userservice.core.entity.User;
 
 public interface  UserRepository {
-    Optional<User> findById(User user);
+    Optional<User> findById(Integer id);
 }
