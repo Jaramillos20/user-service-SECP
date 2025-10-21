@@ -54,4 +54,4 @@ http://localhost:8080/swagger-ui/index.html#/
 ```
 
 > [!NOTE]
-> This proyect uses this data base:  <a href="#"> Scalable E commerce platform Data base </a>.
+> This proyect uses this data base:  <a href="https://github.com/untalbry/scalable-e-commerce-db"> Scalable E commerce platform Data base </a>.
