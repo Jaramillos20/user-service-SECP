@@ -1,0 +1,67 @@
+name: Validate API Version
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set base commit
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "commit=origin/${{ github.base_ref }}" >> $GITHUB_OUTPUT
+            echo "branch=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "commit=HEAD^" >> $GITHUB_OUTPUT
+            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract versions
+        id: versions
+        run: |
+          extract_version() {
+            local content="$1"
+            echo "$content" | grep -Eo 'version\s*=\s*["v0-9.]+|^springdoc.info.version=.*' | \
+            grep -Eo '[v0-9.]+$' | head -1 | tr -d '\" '
+          }
+          
+          current_java=$(cat src/main/java/**/OpenApiConfig.java 2>/dev/null || true)
+          current_props=$(cat src/main/resources/application.properties 2>/dev/null || true)
+          prev_java=$(git show ${{ steps.base.outputs.commit }}:src/main/java/**/OpenApiConfig.java 2>/dev/null || true)
+          prev_props=$(git show ${{ steps.base.outputs.commit }}:src/main/resources/application.properties 2>/dev/null || true)
+          
+          current=$(extract_version "$current_java$current_props")
+          previous=$(extract_version "$prev_java$prev_props")
+          
+          echo "current=$current" >> $GITHUB_OUTPUT
+          echo "previous=$previous" >> $GITHUB_OUTPUT
+
+      - name: Validate version change
+        run: |
+          current="${{ steps.versions.outputs.current }}"
+          previous="${{ steps.versions.outputs.previous }}"
+          
+          echo "Current version: $current"
+          echo "Previous version: $previous"
+          
+          if [ -z "$current" ] || [ -z "$previous" ]; then
+            echo "Warning: Version not found in one or both commits"
+            exit 0
+          fi
+          
+          if [ "$current" == "$previous" ]; then
+            echo "Error: API version must be incremented before merging to ${{ steps.base.outputs.branch }}"
+            exit 1
+          fi
+          
+          echo "Success: API version changed from $previous to $current"
