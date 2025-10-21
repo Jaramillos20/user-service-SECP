@@ -24,27 +24,27 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      - name: Extract current version
+      - name: Extract current version from pom.xml
         id: current_version
         run: |
-          VERSION=$(grep -oP '(?<=\.version\(")[^"]*' src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java | head -1)
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $VERSION"
       
-      - name: Extract main version
+      - name: Extract main version from pom.xml
         id: main_version
         if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
         run: |
           git fetch origin main
-          git checkout origin/main -- src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java 2>/dev/null || echo "0.0.0" > /tmp/main_version.txt
-          if [ -f src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java ]; then
-            MAIN_VERSION=$(grep -oP '(?<=\.version\(")[^"]*' src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java | head -1)
+          git checkout origin/main -- pom.xml 2>/dev/null || echo "0.0.0" > /tmp/main_version.txt
+          if [ -f pom.xml ]; then
+            MAIN_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           else
             MAIN_VERSION="0.0.0"
           fi
           echo "version=$MAIN_VERSION" >> $GITHUB_OUTPUT
           echo "Main version: $MAIN_VERSION"
-          git checkout HEAD -- src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java 2>/dev/null || true
+          git checkout HEAD -- pom.xml 2>/dev/null || true
       
       - name: Compare versions
         if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
@@ -53,21 +53,25 @@ jobs:
           MAIN="${{ steps.main_version.outputs.version }}"
           
           echo "================================"
-          echo "🔍 Comparing API versions..."
+          echo "🔍 Comparing project versions..."
           echo "================================"
           echo "Main branch version:    $MAIN"
           echo "Current branch version: $CURRENT"
           echo "================================"
           
+          # Remove -SNAPSHOT suffix if present
+          CURRENT_CLEAN=$(echo "$CURRENT" | sed 's/-SNAPSHOT//')
+          MAIN_CLEAN=$(echo "$MAIN" | sed 's/-SNAPSHOT//')
+          
           # Validate version format
-          if ! [[ "$CURRENT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Error: Current version '$CURRENT' is not in valid format (X.Y.Z)"
+          if ! [[ "$CURRENT_CLEAN" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: Current version '$CURRENT_CLEAN' is not in valid format (X.Y.Z)"
             exit 1
           fi
           
           # Convert versions to comparable format
-          IFS='.' read -r -a current_parts <<< "$CURRENT"
-          IFS='.' read -r -a main_parts <<< "$MAIN"
+          IFS='.' read -r -a current_parts <<< "$CURRENT_CLEAN"
+          IFS='.' read -r -a main_parts <<< "$MAIN_CLEAN"
           
           current_major="${current_parts[0]}"
           current_minor="${current_parts[1]}"
@@ -83,7 +87,7 @@ jobs:
             exit 0
           elif [ "$current_major" -lt "$main_major" ]; then
             echo "❌ Error: Major version decreased ($main_major → $current_major)"
-            echo "Please ensure the version is greater than $MAIN"
+            echo "Please ensure the version in pom.xml is greater than $MAIN"
             exit 1
           fi
           
@@ -93,26 +97,28 @@ jobs:
             exit 0
           elif [ "$current_minor" -lt "$main_minor" ]; then
             echo "❌ Error: Minor version decreased ($main_major.$main_minor → $current_major.$current_minor)"
-            echo "Please ensure the version is greater than $MAIN"
+            echo "Please ensure the version in pom.xml is greater than $MAIN"
             exit 1
           fi
           
           # Compare patch version
           if [ "$current_patch" -gt "$main_patch" ]; then
-            echo "✅ Version is valid: Patch version increased ($MAIN → $CURRENT)"
+            echo "✅ Version is valid: Patch version increased ($MAIN_CLEAN → $CURRENT_CLEAN)"
             exit 0
           elif [ "$current_patch" -lt "$main_patch" ]; then
-            echo "❌ Error: Patch version decreased ($MAIN → $CURRENT)"
-            echo "Please ensure the version is greater than $MAIN"
+            echo "❌ Error: Patch version decreased ($MAIN_CLEAN → $CURRENT_CLEAN)"
+            echo "Please ensure the version in pom.xml is greater than $MAIN"
             exit 1
           else
-            echo "❌ Error: Version is the same as main branch ($MAIN)"
-            echo "Please increment the version to be greater than $MAIN"
+            echo "❌ Error: Version is the same as main branch ($MAIN_CLEAN)"
+            echo "Please increment the version in pom.xml to be greater than $MAIN"
             echo ""
             echo "Suggestions:"
             echo "  - For bug fixes: $main_major.$main_minor.$((main_patch + 1))"
             echo "  - For new features: $main_major.$((main_minor + 1)).0"
             echo "  - For breaking changes: $((main_major + 1)).0.0"
+            echo ""
+            echo "Don't forget to update the version in OpenApiConfig.java as well!"
             exit 1
           fi
       
