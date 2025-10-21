@@ -2,66 +2,121 @@ name: Validate API Version
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
 
 jobs:
-  check-version:
+  validate-version:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout code
+      - name: Checkout current branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set base commit
-        id: base
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Extract current version
+        id: current_version
         run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            echo "commit=origin/${{ github.base_ref }}" >> $GITHUB_OUTPUT
-            echo "branch=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+          VERSION=$(grep -oP '(?<=\.version\(")[^"]*' src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java | head -1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+      
+      - name: Extract main version
+        id: main_version
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+        run: |
+          git fetch origin main
+          git checkout origin/main -- src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java 2>/dev/null || echo "0.0.0" > /tmp/main_version.txt
+          if [ -f src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java ]; then
+            MAIN_VERSION=$(grep -oP '(?<=\.version\(")[^"]*' src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java | head -1)
           else
-            echo "commit=HEAD^" >> $GITHUB_OUTPUT
-            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            MAIN_VERSION="0.0.0"
           fi
-
-      - name: Extract versions
-        id: versions
+          echo "version=$MAIN_VERSION" >> $GITHUB_OUTPUT
+          echo "Main version: $MAIN_VERSION"
+          git checkout HEAD -- src/main/java/com/binarybrains/userservice/config/OpenApiConfig.java 2>/dev/null || true
+      
+      - name: Compare versions
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
         run: |
-          extract_version() {
-            local content="$1"
-            echo "$content" | grep -Eo 'version\s*=\s*["v0-9.]+|^springdoc.info.version=.*' | \
-            grep -Eo '[v0-9.]+$' | head -1 | tr -d '\" '
-          }
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          MAIN="${{ steps.main_version.outputs.version }}"
           
-          current_java=$(cat src/main/java/**/OpenApiConfig.java 2>/dev/null || true)
-          current_props=$(cat src/main/resources/application.properties 2>/dev/null || true)
-          prev_java=$(git show ${{ steps.base.outputs.commit }}:src/main/java/**/OpenApiConfig.java 2>/dev/null || true)
-          prev_props=$(git show ${{ steps.base.outputs.commit }}:src/main/resources/application.properties 2>/dev/null || true)
+          echo "================================"
+          echo "🔍 Comparing API versions..."
+          echo "================================"
+          echo "Main branch version:    $MAIN"
+          echo "Current branch version: $CURRENT"
+          echo "================================"
           
-          current=$(extract_version "$current_java$current_props")
-          previous=$(extract_version "$prev_java$prev_props")
-          
-          echo "current=$current" >> $GITHUB_OUTPUT
-          echo "previous=$previous" >> $GITHUB_OUTPUT
-
-      - name: Validate version change
-        run: |
-          current="${{ steps.versions.outputs.current }}"
-          previous="${{ steps.versions.outputs.previous }}"
-          
-          echo "Current version: $current"
-          echo "Previous version: $previous"
-          
-          if [ -z "$current" ] || [ -z "$previous" ]; then
-            echo "Warning: Version not found in one or both commits"
-            exit 0
-          fi
-          
-          if [ "$current" == "$previous" ]; then
-            echo "Error: API version must be incremented before merging to ${{ steps.base.outputs.branch }}"
+          # Validate version format
+          if ! [[ "$CURRENT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: Current version '$CURRENT' is not in valid format (X.Y.Z)"
             exit 1
           fi
           
-          echo "Success: API version changed from $previous to $current"
+          # Convert versions to comparable format
+          IFS='.' read -r -a current_parts <<< "$CURRENT"
+          IFS='.' read -r -a main_parts <<< "$MAIN"
+          
+          current_major="${current_parts[0]}"
+          current_minor="${current_parts[1]}"
+          current_patch="${current_parts[2]}"
+          
+          main_major="${main_parts[0]}"
+          main_minor="${main_parts[1]}"
+          main_patch="${main_parts[2]}"
+          
+          # Compare major version
+          if [ "$current_major" -gt "$main_major" ]; then
+            echo "✅ Version is valid: Major version increased ($main_major → $current_major)"
+            exit 0
+          elif [ "$current_major" -lt "$main_major" ]; then
+            echo "❌ Error: Major version decreased ($main_major → $current_major)"
+            echo "Please ensure the version is greater than $MAIN"
+            exit 1
+          fi
+          
+          # Compare minor version
+          if [ "$current_minor" -gt "$main_minor" ]; then
+            echo "✅ Version is valid: Minor version increased ($main_major.$main_minor → $current_major.$current_minor)"
+            exit 0
+          elif [ "$current_minor" -lt "$main_minor" ]; then
+            echo "❌ Error: Minor version decreased ($main_major.$main_minor → $current_major.$current_minor)"
+            echo "Please ensure the version is greater than $MAIN"
+            exit 1
+          fi
+          
+          # Compare patch version
+          if [ "$current_patch" -gt "$main_patch" ]; then
+            echo "✅ Version is valid: Patch version increased ($MAIN → $CURRENT)"
+            exit 0
+          elif [ "$current_patch" -lt "$main_patch" ]; then
+            echo "❌ Error: Patch version decreased ($MAIN → $CURRENT)"
+            echo "Please ensure the version is greater than $MAIN"
+            exit 1
+          else
+            echo "❌ Error: Version is the same as main branch ($MAIN)"
+            echo "Please increment the version to be greater than $MAIN"
+            echo ""
+            echo "Suggestions:"
+            echo "  - For bug fixes: $main_major.$main_minor.$((main_patch + 1))"
+            echo "  - For new features: $main_major.$((main_minor + 1)).0"
+            echo "  - For breaking changes: $((main_major + 1)).0.0"
+            exit 1
+          fi
+      
+      - name: Log version for push to main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "✅ Version ${{ steps.current_version.outputs.version }} merged to main"
