@@ -2,9 +2,9 @@ name: Validate API Version
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ main, develop ]
   pull_request:
-    branches: [main, develop]
+    branches: [ main, develop ]
 
 jobs:
   check-version:
@@ -13,55 +13,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # necesario para comparar con la rama anterior
 
-      - name: Set base commit
-        id: base
+      - name: Get current API version
+        id: current
         run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            echo "commit=origin/${{ github.base_ref }}" >> $GITHUB_OUTPUT
-            echo "branch=${{ github.base_ref }}" >> $GITHUB_OUTPUT
-          else
-            echo "commit=HEAD^" >> $GITHUB_OUTPUT
-            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          VERSION=$(grep -Eo 'version\\s*=\\s*["v0-9.]+' src/main/java/**/OpenApiConfig.java || true)
+          if [ -z "$VERSION" ]; then
+            VERSION=$(grep -E '^springdoc.info.version=' src/main/resources/application.properties | cut -d'=' -f2)
           fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Extract versions
-        id: versions
+      - name: Get previous API version (from main)
+        id: previous
         run: |
-          extract_version() {
-            local content="$1"
-            echo "$content" | grep -Eo 'version\s*=\s*["v0-9.]+|^springdoc.info.version=.*' | \
-            grep -Eo '[v0-9.]+$' | head -1 | tr -d '\" '
-          }
-          
-          current_java=$(cat src/main/java/**/OpenApiConfig.java 2>/dev/null || true)
-          current_props=$(cat src/main/resources/application.properties 2>/dev/null || true)
-          prev_java=$(git show ${{ steps.base.outputs.commit }}:src/main/java/**/OpenApiConfig.java 2>/dev/null || true)
-          prev_props=$(git show ${{ steps.base.outputs.commit }}:src/main/resources/application.properties 2>/dev/null || true)
-          
-          current=$(extract_version "$current_java$current_props")
-          previous=$(extract_version "$prev_java$prev_props")
-          
-          echo "current=$current" >> $GITHUB_OUTPUT
-          echo "previous=$previous" >> $GITHUB_OUTPUT
-
-      - name: Validate version change
-        run: |
-          current="${{ steps.versions.outputs.current }}"
-          previous="${{ steps.versions.outputs.previous }}"
-          
-          echo "Current version: $current"
-          echo "Previous version: $previous"
-          
-          if [ -z "$current" ] || [ -z "$previous" ]; then
-            echo "Warning: Version not found in one or both commits"
-            exit 0
+          git fetch origin main
+          PREV_VERSION=$(git show origin/main:src/main/java/**/OpenApiConfig.java | grep -Eo 'version\\s*=\\s*["v0-9.]+' || true)
+          if [ -z "$PREV_VERSION" ]; then
+            PREV_VERSION=$(git show origin/main:src/main/resources/application.properties | grep -E '^springdoc.info.version=' | cut -d'=' -f2)
           fi
-          
-          if [ "$current" == "$previous" ]; then
-            echo "Error: API version must be incremented before merging to ${{ steps.base.outputs.branch }}"
+          echo "version=$PREV_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compare API versions
+        run: |
+          echo "Current:  ${{ steps.current.outputs.version }}"
+          echo "Previous: ${{ steps.previous.outputs.version }}"
+
+          if [ "${{ steps.current.outputs.version }}" == "${{ steps.previous.outputs.version }}" ]; then
+            echo "❌ API version must be incremented before pushing changes."
             exit 1
+          else
+            echo "✅ API version changed — OK to merge."
           fi
-          
-          echo "Success: API version changed from $previous to $current"
+
