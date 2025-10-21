@@ -1,5 +1,6 @@
 package com.binarybrains.userservice.external.rest.controller;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +19,12 @@ public class UserController {
     }
  
     @GetMapping("/{id}")
-    public UserDto getUsersById(@PathVariable("id") Integer id) {
-        return UserDto.fromEntity(userService.getById(id));
+    public ResponseEntity<UserDto> getUsersById(@PathVariable("id") Integer id) {
+        var result = userService.getById(id);
+        if (result.isLeft()) {
+            return ResponseEntity.ok(UserDto.fromEntity(result.getLeft()));
+        } else {
+            return ResponseEntity.status(404).body(null);
+        }
     }
 } 
