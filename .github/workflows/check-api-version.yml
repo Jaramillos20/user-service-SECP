@@ -2,52 +2,84 @@ name: Validate API Version
 
 on:
   push:
-    branches: [ main, develop ]
+    branches:
+      - main
   pull_request:
-    branches: [ main, develop ]
+    branches:
+      - main
 
 jobs:
-  check-version:
+  validate-version:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # necesario para comparar con main
-
-      - name: Get current API version
-        id: current
+          fetch-depth: 0
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      
+      - name: Extract current version
+        id: current_version
         run: |
-          VERSION=$(grep -Eo 'version\\("v[0-9]+\.[0-9]+\.[0-9]+"' src/main/java/**/OpenApiConfig.java | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+')
-          if [ -z "$VERSION" ]; then
-            echo "❌ No API version found in OpenApiConfig.java"
-            exit 1
-          fi
-          echo "Current API version: $VERSION"
+          VERSION=$(grep -oP '(?<=version\(")[^"]*' src/main/java/*/config/OpenApiConfig.java | head -1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Get previous API version (from main)
-        id: previous
+          echo "Current version: $VERSION"
+      
+      - name: Extract main version
+        id: main_version
         run: |
           git fetch origin main
-          PREV_VERSION=$(git show origin/main:src/main/java/**/OpenApiConfig.java | grep -Eo 'version\\("v[0-9]+\.[0-9]+\.[0-9]+"' | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+')
-          if [ -z "$PREV_VERSION" ]; then
-            echo "⚠️  No version found in main branch — skipping comparison."
-            exit 0
-          fi
-          echo "Previous API version: $PREV_VERSION"
-          echo "version=$PREV_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Compare API versions
+          git checkout origin/main -- src/main/java/*/config/OpenApiConfig.java || echo "File not found in main"
+          MAIN_VERSION=$(grep -oP '(?<=version\(")[^"]*' src/main/java/*/config/OpenApiConfig.java | head -1 || echo "0.0.0")
+          echo "version=$MAIN_VERSION" >> $GITHUB_OUTPUT
+          echo "Main version: $MAIN_VERSION"
+          git checkout HEAD -- src/main/java/*/config/OpenApiConfig.java
+      
+      - name: Compare versions
         run: |
-          echo "Current:  ${{ steps.current.outputs.version }}"
-          echo "Previous: ${{ steps.previous.outputs.version }}"
-
-          if [ "${{ steps.current.outputs.version }}" == "${{ steps.previous.outputs.version }}" ]; then
-            echo "❌ API version must be incremented before pushing changes."
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          MAIN="${{ steps.main_version.outputs.version }}"
+          
+          echo "Comparing versions..."
+          echo "Main branch version: $MAIN"
+          echo "Current branch version: $CURRENT"
+          
+          # Convert versions to comparable format
+          IFS='.' read -r -a current_parts <<< "$CURRENT"
+          IFS='.' read -r -a main_parts <<< "$MAIN"
+          
+          # Compare major version
+          if [ "${current_parts[0]}" -gt "${main_parts[0]}" ]; then
+            echo "✓ Version is greater (major version increased)"
+            exit 0
+          elif [ "${current_parts[0]}" -lt "${main_parts[0]}" ]; then
+            echo "✗ Version is lower than main branch"
+            exit 1
+          fi
+          
+          # Compare minor version
+          if [ "${current_parts[1]}" -gt "${main_parts[1]}" ]; then
+            echo "✓ Version is greater (minor version increased)"
+            exit 0
+          elif [ "${current_parts[1]}" -lt "${main_parts[1]}" ]; then
+            echo "✗ Version is lower than main branch"
+            exit 1
+          fi
+          
+          # Compare patch version
+          if [ "${current_parts[2]}" -gt "${main_parts[2]}" ]; then
+            echo "✓ Version is greater (patch version increased)"
+            exit 0
+          elif [ "${current_parts[2]}" -lt "${main_parts[2]}" ]; then
+            echo "✗ Version is lower than main branch"
             exit 1
           else
-            echo "✅ API version changed — OK to merge."
+            echo "✗ Version is the same as main branch. Please increment the version."
+            exit 1
           fi
-
