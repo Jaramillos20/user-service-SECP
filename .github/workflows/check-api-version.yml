@@ -9,29 +9,34 @@ on:
 jobs:
   check-version:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout current branch
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # necesario para comparar con la rama anterior
+          fetch-depth: 0  # necesario para comparar con main
 
       - name: Get current API version
         id: current
         run: |
-          VERSION=$(grep -Eo 'version\\s*=\\s*["v0-9.]+' src/main/java/**/OpenApiConfig.java || true)
+          VERSION=$(grep -Eo 'version\\("v[0-9]+\.[0-9]+\.[0-9]+"' src/main/java/**/OpenApiConfig.java | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+')
           if [ -z "$VERSION" ]; then
-            VERSION=$(grep -E '^springdoc.info.version=' src/main/resources/application.properties | cut -d'=' -f2)
+            echo "❌ No API version found in OpenApiConfig.java"
+            exit 1
           fi
+          echo "Current API version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Get previous API version (from main)
         id: previous
         run: |
           git fetch origin main
-          PREV_VERSION=$(git show origin/main:src/main/java/**/OpenApiConfig.java | grep -Eo 'version\\s*=\\s*["v0-9.]+' || true)
+          PREV_VERSION=$(git show origin/main:src/main/java/**/OpenApiConfig.java | grep -Eo 'version\\("v[0-9]+\.[0-9]+\.[0-9]+"' | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+')
           if [ -z "$PREV_VERSION" ]; then
-            PREV_VERSION=$(git show origin/main:src/main/resources/application.properties | grep -E '^springdoc.info.version=' | cut -d'=' -f2)
+            echo "⚠️  No version found in main branch — skipping comparison."
+            exit 0
           fi
+          echo "Previous API version: $PREV_VERSION"
           echo "version=$PREV_VERSION" >> $GITHUB_OUTPUT
 
       - name: Compare API versions
