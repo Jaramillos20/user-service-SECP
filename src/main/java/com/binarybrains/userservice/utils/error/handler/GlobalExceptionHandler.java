@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
         error.setType(error.getType());
         error.setRuta(Thread.currentThread().getStackTrace()[2].getClassName());
         HttpStatus status = HttpStatus.BAD_REQUEST;
-        if("NOT_FOUND".equals(error.getCode())){
+        if("RN004".equals(error.getCode())){
             status = HttpStatus.NOT_FOUND;
         }
         return ResponseEntity.status(status).body(error);

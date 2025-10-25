@@ -1,6 +1,5 @@
 package com.binarybrains.userservice.utils.error;
 
-import javax.lang.model.type.ErrorType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
