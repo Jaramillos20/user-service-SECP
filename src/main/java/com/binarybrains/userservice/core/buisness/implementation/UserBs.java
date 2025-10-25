@@ -20,9 +20,9 @@ public class UserBs implements UserService{
     @Override
     public Either<User, ErrorCode> getById(Integer id) {
         Either<User, ErrorCode> result = Either.right(ErrorCode.RN004);
-        var userOpt = userRepository.findById(id);
-        if(userOpt.isPresent()){
-            result = Either.left(userOpt.get());
+        var user = userRepository.findById(id);
+        if(user.isPresent()){
+            result = Either.left(user.get());
         }
         return result;
     }

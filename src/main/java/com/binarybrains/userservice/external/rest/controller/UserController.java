@@ -1,5 +1,6 @@
 package com.binarybrains.userservice.external.rest.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,11 +31,7 @@ public class UserController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<UserDto> getUsersById(@PathVariable Integer id) {
-        var result = userService.getById(id);
-        if (result.isLeft()) {
-            return ResponseEntity.ok(UserDto.fromEntity(result.getLeft()));
-        } else {
-            return ResponseEntity.status(404).body(null);
-        }
+        //TODO: 
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
     }
 } 
