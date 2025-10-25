@@ -17,35 +17,19 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 
 @RestController
-@RequestMapping(
-    value = "/user",
-    produces = MediaType.APPLICATION_JSON_VALUE,
-    consumes = MediaType.APPLICATION_JSON_VALUE
-    )
+@RequestMapping(value = "/user", produces = MediaType.APPLICATION_JSON_VALUE)
 public class UserController {
-    UserService userService;
+    private final UserService userService;
     public UserController(UserService userService) {
         this.userService = userService;
     }
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200", 
-            description = "User found successfully",
-            content = {
-                @Content(
-                schema = @Schema(implementation = UserDto.class)
-                )
-            }
-        ),
-        @ApiResponse(
-            responseCode = "404", 
-            description = "User not found",
-            content= @Content( schema= @Schema(example = "{\"error\": \"User not found\"}")) 
-        ),
+        @ApiResponse(responseCode = "200",description = "User found successfully", content = {@Content(schema = @Schema(implementation = UserDto.class))}),
+        @ApiResponse(responseCode = "404", description = "User not found", content= @Content( schema= @Schema(example = "{\"error\": \"User not found\"}"))),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = {@Content()})
     })
     @GetMapping("/{id}")
-    public ResponseEntity<UserDto> getUsersById(@PathVariable("id") Integer id) {
+    public ResponseEntity<UserDto> getUsersById(@PathVariable Integer id) {
         var result = userService.getById(id);
         if (result.isLeft()) {
             return ResponseEntity.ok(UserDto.fromEntity(result.getLeft()));
