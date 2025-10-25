@@ -54,6 +54,5 @@ class UserServiceUnitTest {
 		var result = userBs.getById(2);
 		assertTrue(result.isLeft());
 		assertEquals("RN004", result.getLeft().getCode());
-
 	}
 }
