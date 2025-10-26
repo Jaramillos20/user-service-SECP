@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.binarybrains</groupId>
 	<artifactId>userservice</artifactId>
-	<version>0.0.3-SNAPSHOT</version>
+	<version>0.0.4-SNAPSHOT</version>
 	<name>userservice</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>
@@ -67,12 +67,18 @@
 	</dependencies>
 
 	<build>
-	    <resources>
+		  <resources>
+			<resource>
+			<directory>src/main/resources</directory>
+			<includes>
+				<include>**/*</include>
+			</includes>
+			</resource>
 			<resource>
 				<directory>src/main/resources</directory>
 				<filtering>true</filtering>
 			</resource>
-    	</resources>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -99,6 +105,7 @@
 				</configuration>
 			</plugin>
 		</plugins>
+
 	</build>
 
 </project>

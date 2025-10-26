@@ -1,0 +1,64 @@
+{
+  "errorsInfo": [
+    {
+      "code": "RN000",
+      "message": "Error desconocido.",
+      "ruta": "global",
+      "type": "SYSTEM"
+    },
+    {
+      "code": "RN001",
+      "message": "Este campo es obligatorio. Favor de ingresar la información.",
+      "ruta": "global",
+      "type": "FIELD"
+    },
+    {
+      "code": "RN002",
+      "message": "Formato de dato inválido.",
+      "ruta": "global",
+      "type": "FIELD"
+    },
+    {
+      "code": "RN003",
+      "message": "Ya existe este elemento.",
+      "ruta": "global",
+      "type": "REQUEST"
+    },
+    {
+      "code": "RN004",
+      "message": "Entidad no encontrada.",
+      "ruta": "global",
+      "type": "REQUEST"
+    },
+    {
+      "code": "RN005",
+      "message": "Correo no validado.",
+      "ruta": "global",
+      "type": "REQUEST"
+    },
+    {
+      "code": "RN006",
+      "message": "Número no validado.",
+      "ruta": "global",
+      "type": "REQUEST"
+    },
+    {
+      "code": "RN007",
+      "message": "Código de verificación erróneo.",
+      "ruta": "global",
+      "type": "REQUEST"
+    },
+    {
+      "code": "RN008",
+      "message": "Nombre no válido.",
+      "ruta": "global",
+      "type": "FIELD"
+    },
+    {
+      "code": "RN009",
+      "message": "No se puede eliminar la cuenta.",
+      "ruta": "global",
+      "type": "REQUEST"
+    }
+  ]
+}
