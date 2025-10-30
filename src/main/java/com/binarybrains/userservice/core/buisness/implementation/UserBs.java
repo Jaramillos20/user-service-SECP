@@ -1,6 +1,9 @@
 package com.binarybrains.userservice.core.buisness.implementation;
 
 
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -26,5 +29,17 @@ public class UserBs implements UserService{
         return userRepository.findById(id)
                 .<Either<ErrorInfo, User>>map(Either::right)
                 .orElseGet(() -> Either.left(errorMapper.getRn004()));
+    }
+    @Override
+    public Either<ErrorInfo, User> create(User user) {
+        Either<ErrorInfo, User> response = Either.left(errorMapper.getRn003());
+        Optional<List<User>> existingUser = userRepository.findByEmail(user.getEmail());
+        if(existingUser.isPresent() && existingUser.get().isEmpty()) {
+            Optional<User> savedUser = userRepository.save(user);
+            if(savedUser.isPresent()) {
+                response = Either.right(savedUser.get());
+            }
+        }
+        return response; 
     }
 }
