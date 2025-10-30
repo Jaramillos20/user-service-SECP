@@ -37,12 +37,12 @@ public class UserJpa {
             .number(this.number)
             .build();
     }
-    public static UserJpa fromEntity(UserJpa userJpa) {
+    public static UserJpa fromEntity(User user) {
         return UserJpa.builder()
-            .id(userJpa.getId())
-            .name(userJpa.getName())
-            .email(userJpa.getEmail())
-            .number(userJpa.getNumber())
+            .id(user.getId())
+            .name(user.getName())
+            .email(user.getEmail())
+            .number(user.getNumber())
             .build();
     }
 }
