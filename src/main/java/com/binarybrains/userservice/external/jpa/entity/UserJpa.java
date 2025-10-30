@@ -4,6 +4,8 @@ import com.binarybrains.userservice.core.entity.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -17,10 +19,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
+@Table(name = "ec01_users")
 @Entity
-@Table(name = "ec01-users")
 public class UserJpa {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) 
     @Column(name="id_user")
     private Integer id;
     @Column(name="tx_name")
@@ -37,12 +40,12 @@ public class UserJpa {
             .number(this.number)
             .build();
     }
-    public static UserJpa fromEntity(UserJpa userJpa) {
+    public static UserJpa fromEntity(User user) {
         return UserJpa.builder()
-            .id(userJpa.getId())
-            .name(userJpa.getName())
-            .email(userJpa.getEmail())
-            .number(userJpa.getNumber())
+            .id(user.getId())
+            .name(user.getName())
+            .email(user.getEmail())
+            .number(user.getNumber())
             .build();
     }
 }

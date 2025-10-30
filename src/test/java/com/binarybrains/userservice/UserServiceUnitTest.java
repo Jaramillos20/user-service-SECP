@@ -1,5 +1,6 @@
 package com.binarybrains.userservice;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +30,7 @@ class UserServiceUnitTest {
 
 	@Mock
 	private ErrorGlobalMapper errorMapper;
-
+	// Unit tests for getById method
 	@Test
 	void shouldReturnUsersWhenIdExists() {
 		User user = User.builder()
@@ -54,5 +55,38 @@ class UserServiceUnitTest {
 		var result = userBs.getById(2);
 		assertTrue(result.isLeft());
 		assertEquals("RN004", result.getLeft().getCode());
+	}
+	// Unit tests for createUser method
+	@Test 
+	void shouldCreateUserWhenEmailNotExists(){
+		User user = User.builder()
+						.name("John Smith")
+						.email("johnsmail@gmail.com")
+						.number("+1234567890")
+						.build();
+		when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(List.of()));
+		when(userRepository.save(user)).thenReturn(Optional.of(user));
+		var result = userBs.create(user);
+		assertTrue(result.isRight());
+	}
+	@Test 
+	void shoudReturnErrorWhenEmailExists(){
+		ErrorInfo err = ErrorInfo.builder()
+						.code("RN003")
+						.message("Email already exists")
+						.ruta("/user/")
+						.type(ErrorType.REQUEST)
+						.build();
+		User user = User.builder()
+						.name("John Smith")
+						.email("johnsmail@gmail.com")
+						.number("+1234567890")
+						.build();
+
+		when(errorMapper.getRn003()).thenReturn(err);
+		when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(List.of(user)));
+		var result = userBs.create(user);
+		assertTrue(result.isLeft());
+    	assertEquals("RN003", result.getLeft().getCode());
 	}
 }
